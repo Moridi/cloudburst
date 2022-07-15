@@ -49,7 +49,7 @@ python3.6 setup.py install
 
 cd $HYDRO_HOME/cloudburst
 if [[ -z "$REPO_ORG" ]]; then
-  REPO_ORG="hydro-project"
+  REPO_ORG="Moridi"
 fi
 
 if [[ -z "$REPO_BRANCH" ]]; then
