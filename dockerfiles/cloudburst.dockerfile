@@ -38,9 +38,11 @@ WORKDIR anna
 RUN cd client/python && python3.6 setup.py install
 WORKDIR /
 
+RUN apt-get update
+RUN apt-get -y install libjpeg-dev zlib1g-dev
 # These installations are currently pipeline specific until we figure out a
 # better way to do package management for Python.
-# RUN pip3 install tensorflow==1.12.0 tensorboard==1.12.2 scikit-image
+RUN pip3 install tensorflow==1.12.0 tensorboard==1.12.2 scikit-image
 
 COPY start-cloudburst.sh /start-cloudburst.sh
 
