@@ -53,7 +53,7 @@ if [[ -z "$REPO_ORG" ]]; then
 fi
 
 if [[ -z "$REPO_BRANCH" ]]; then
-  REPO_BRANCH="master"
+  REPO_BRANCH="develop"
 fi
 
 git remote remove origin
