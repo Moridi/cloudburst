@@ -16,9 +16,9 @@ FROM hydroproject/base:latest
 
 MAINTAINER Vikram Sreekanti <vsreekanti@gmail.com> version: 0.1
 
-ARG repo_org=hydro-project
-ARG source_branch=master
-ARG build_branch=docker-build
+ARG repo_org=Moridi
+ARG source_branch=develop
+ARG build_branch=develop
 
 USER root
 
