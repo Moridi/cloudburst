@@ -1,0 +1,157 @@
+diff --git a/cloudburst/client/client.py b/cloudburst/client/client.py
+index 9752afa..267e86e 100644
+--- a/cloudburst/client/client.py
++++ b/cloudburst/client/client.py
+@@ -68,7 +68,7 @@ class CloudburstConnection():
+         # Picks a random offset of 10, mostly to alleviate port conflicts when
+         # running in local mode.
+         self.kvs_client = AnnaTcpClient(kvs_addr, ip, local=local,
+-                                        offset=tid + 10)
++                                        offset=tid + 100)
+ 
+         self.func_create_sock = self.context.socket(zmq.REQ)
+         self.func_create_sock.connect(self.service_addr % FUNC_CREATE_PORT)
+diff --git a/cloudburst/server/executor/server.py b/cloudburst/server/executor/server.py
+index 5528fb3..9d1c3b7 100644
+--- a/cloudburst/server/executor/server.py
++++ b/cloudburst/server/executor/server.py
+@@ -12,6 +12,7 @@
+ #  See the License for the specific language governing permissions and
+ #  limitations under the License.
+ 
++from concurrent.futures import thread
+ import logging
+ import os
+ import sys
+@@ -94,7 +95,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
+         client = AnnaIpcClient(thread_id, context)
+         local = False
+     else:
+-        client = AnnaTcpClient('127.0.0.1', '127.0.0.1', local=True, offset=1)
++        client = AnnaTcpClient('127.0.0.1', '127.0.0.1', local=True, offset=thread_id+1)
+         local = True
+ 
+     user_library = CloudburstUserLibrary(context, pusher_cache, ip, thread_id,
+@@ -499,6 +500,10 @@ if __name__ == '__main__':
+ 
+     conf = sutils.load_conf(conf_file)
+     exec_conf = conf['executor']
++    
++    # MULTITHREADED VERSION
++    if len(sys.argv) == 3: 
++        exec_conf['thread_id'] = sys.argv[2]
+ 
+     executor(conf['ip'], conf['mgmt_ip'], exec_conf['scheduler_ips'],
+              int(exec_conf['thread_id']))
+diff --git a/cloudburst/server/executor/user_library.py b/cloudburst/server/executor/user_library.py
+index 00e47f0..123778c 100644
+--- a/cloudburst/server/executor/user_library.py
++++ b/cloudburst/server/executor/user_library.py
+@@ -16,9 +16,33 @@ import zmq
+ 
+ import cloudburst.server.utils as sutils
+ from cloudburst.shared.serializer import Serializer
++from nvm import pmemobj
+ 
+ serializer = Serializer()
+ 
++class AppRootA(pmemobj.PersistentObject):
++    def __init__(self):
++        MAX_THREADS = 30
++        
++        self.checkpoint = self._p_mm.new(pmemobj.PersistentList)
++        for _ in range(MAX_THREADS):
++            self.checkpoint.append(1)
++
++class AppRootB(pmemobj.PersistentObject):
++    def __init__(self):
++        MAX_THREADS = 30
++
++        self.checkpoint = self._p_mm.new(pmemobj.PersistentList)
++        for _ in range(MAX_THREADS):
++            self.checkpoint.append(0)
++
++class AppRootC(pmemobj.PersistentObject):
++    def __init__(self):
++        MAX_THREADS = 30
++        
++        self.checkpoint = self._p_mm.new(pmemobj.PersistentList)
++        for _ in range(MAX_THREADS):
++            self.checkpoint.append(1)
+ 
+ class AbstractCloudburstUserLibrary:
+     # Stores a lattice value at ref.
+@@ -59,6 +83,21 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
+         # Socket on which inbound messages, if any, will be received.
+         self.recv_inbox_socket = context.socket(zmq.PULL)
+         self.recv_inbox_socket.bind(self.address)
++        
++        self.A = pmemobj.PersistentObjectPool('factorial.A.' + str(tid) + '.pmemobj', flag='c')
++
++        if self.A.root is None:
++            self.A.root = self.A.new(AppRootA)
++            
++        self.B = pmemobj.PersistentObjectPool('factorial.B.' + str(tid) + '.pmemobj', flag='c')
++
++        if self.B.root is None:
++            self.B.root = self.B.new(AppRootB)
++            
++        self.C = pmemobj.PersistentObjectPool('factorial.C.' + str(tid) + '.pmemobj', flag='c')
++
++        if self.C.root is None:
++            self.C.root = self.C.new(AppRootC)
+ 
+     def put(self, ref, value):
+         return self.anna_client.put(ref, serializer.dump_lattice(value))
+@@ -126,3 +165,24 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
+         # Closes the context for this request by clearing any outstanding
+         # messages.
+         self.recv()
++
++    def pmem_put_A(self, value, tid=0):
++        self.A.root.checkpoint[tid] = value
++        # self.A.mm.persist(self.A.root.checkpoint[tid])
++         
++    def pmem_get_A(self, tid=0):
++        return self.A.root.checkpoint[tid]
++
++    def pmem_put_B(self, value, tid=0):
++        self.B.root.checkpoint[tid] = value
++        # self.B.mm.persist(self.B.root.checkpoint[tid])
++         
++    def pmem_get_B(self, tid=0):
++        return self.B.root.checkpoint[tid]
++    
++    def pmem_put_C(self, value, tid=0):
++        self.C.root.checkpoint[tid] = value
++        # self.C.mm.persist(self.C.root.checkpoint[tid])
++         
++    def pmem_get_C(self, tid=0):
++        return self.C.root.checkpoint[tid]
+\ No newline at end of file
+diff --git a/cloudburst/server/utils.py b/cloudburst/server/utils.py
+index 0ebaa9c..be7773b 100644
+--- a/cloudburst/server/utils.py
++++ b/cloudburst/server/utils.py
+@@ -22,12 +22,15 @@ from cloudburst.shared.proto.cloudburst_pb2 import GenericResponse
+ FUNC_PREFIX = 'funcs/'
+ BIND_ADDR_TEMPLATE = 'tcp://*:%d'
+ 
+-PIN_PORT = 4000
+-UNPIN_PORT = 4010
+-FUNC_EXEC_PORT = 4020
+-DAG_QUEUE_PORT = 4030
+-DAG_EXEC_PORT = 4040
+-SELF_DEPART_PORT = 4050
++SPACING = 60
++BASE = 4000
++
++PIN_PORT = BASE + 0 * SPACING
++UNPIN_PORT = BASE + 1 * SPACING
++FUNC_EXEC_PORT = BASE + 2 * SPACING
++DAG_QUEUE_PORT = BASE + 3 * SPACING
++DAG_EXEC_PORT = BASE + 4 * SPACING
++SELF_DEPART_PORT = BASE + 5 * SPACING
+ 
+ STATUS_PORT = 5007
+ SCHED_UPDATE_PORT = 5008

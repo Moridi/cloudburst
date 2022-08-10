@@ -1,0 +1,115 @@
+A: 1
+B: 0
+key: 1
+C: 1
+
+
+
+$$$$$$$$$$$$$$$$$$$
+recov
+Seconds since epoch = 0.21499896049499512
+A: 100
+B: 100
+key: 93326
+C: 93326
+
+
+
+$$$$$$$$$$$$$$$$$$$
+borkenRecov1
+Seconds since epoch = 0.07562112808227539
+A: 32
+B: 32
+key: 26313
+C: 26313
+
+
+
+$$$$$$$$$$$$$$$$$$$
+recov
+Seconds since epoch = 0.16249442100524902
+A: 100
+B: 100
+key: 93326
+C: 93326
+
+
+
+$$$$$$$$$$$$$$$$$$$
+borkenRecov2
+Seconds since epoch = 0.0796053409576416
+A: 33
+B: 32
+key: 26313
+C: 26313
+
+
+
+$$$$$$$$$$$$$$$$$$$
+recov
+Seconds since epoch = 0.15889811515808105
+A: 100
+B: 100
+key: 93326
+C: 93326
+
+
+
+$$$$$$$$$$$$$$$$$$$
+recov
+Seconds since epoch = 0.0017004013061523438
+A: 100
+B: 100
+key: 93326
+C: 93326
+
+
+
+$$$$$$$$$$$$$$$$$$$
+borkenRecov3
+Seconds since epoch = 0.07489919662475586
+A: 33
+B: 32
+key: 26313
+C: 86833
+
+
+
+$$$$$$$$$$$$$$$$$$$
+recov
+Seconds since epoch = 0.16161513328552246
+A: 100
+B: 100
+key: 93326
+C: 93326
+
+
+
+$$$$$$$$$$$$$$$$$$$
+borkenRecov4
+Seconds since epoch = 0.07712483406066895
+A: 33
+B: 33
+key: 26313
+C: 86833
+
+
+
+$$$$$$$$$$$$$$$$$$$
+recov
+Seconds since epoch = 0.17242145538330078
+A: 100
+B: 100
+key: 93326
+C: 93326
+
+
+
+$$$$$$$$$$$$$$$$$$$
+nonRecov
+Seconds since epoch = 0.028786420822143555
+A: 1
+B: 0
+key: 93326
+C: 1
+

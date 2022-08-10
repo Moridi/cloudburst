@@ -16,9 +16,33 @@ import zmq
 
 import cloudburst.server.utils as sutils
 from cloudburst.shared.serializer import Serializer
+from nvm import pmemobj
 
 serializer = Serializer()
 
+class AppRootA(pmemobj.PersistentObject):
+    def __init__(self):
+        MAX_THREADS = 30
+        
+        self.checkpoint = self._p_mm.new(pmemobj.PersistentList)
+        for _ in range(MAX_THREADS):
+            self.checkpoint.append(1)
+
+class AppRootB(pmemobj.PersistentObject):
+    def __init__(self):
+        MAX_THREADS = 30
+
+        self.checkpoint = self._p_mm.new(pmemobj.PersistentList)
+        for _ in range(MAX_THREADS):
+            self.checkpoint.append(0)
+
+class AppRootC(pmemobj.PersistentObject):
+    def __init__(self):
+        MAX_THREADS = 30
+        
+        self.checkpoint = self._p_mm.new(pmemobj.PersistentList)
+        for _ in range(MAX_THREADS):
+            self.checkpoint.append(1)
 
 class AbstractCloudburstUserLibrary:
     # Stores a lattice value at ref.
@@ -59,6 +83,21 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         # Socket on which inbound messages, if any, will be received.
         self.recv_inbox_socket = context.socket(zmq.PULL)
         self.recv_inbox_socket.bind(self.address)
+        
+        self.A = pmemobj.PersistentObjectPool('factorial.A.' + str(tid) + '.pmemobj', flag='c')
+
+        if self.A.root is None:
+            self.A.root = self.A.new(AppRootA)
+            
+        self.B = pmemobj.PersistentObjectPool('factorial.B.' + str(tid) + '.pmemobj', flag='c')
+
+        if self.B.root is None:
+            self.B.root = self.B.new(AppRootB)
+            
+        self.C = pmemobj.PersistentObjectPool('factorial.C.' + str(tid) + '.pmemobj', flag='c')
+
+        if self.C.root is None:
+            self.C.root = self.C.new(AppRootC)
 
     def put(self, ref, value):
         return self.anna_client.put(ref, serializer.dump_lattice(value))
@@ -126,3 +165,24 @@ class CloudburstUserLibrary(AbstractCloudburstUserLibrary):
         # Closes the context for this request by clearing any outstanding
         # messages.
         self.recv()
+
+    def pmem_put_A(self, value, tid=0):
+        self.A.root.checkpoint[tid] = value
+        # self.A.mm.persist(self.A.root.checkpoint[tid])
+         
+    def pmem_get_A(self, tid=0):
+        return self.A.root.checkpoint[tid]
+
+    def pmem_put_B(self, value, tid=0):
+        self.B.root.checkpoint[tid] = value
+        # self.B.mm.persist(self.B.root.checkpoint[tid])
+         
+    def pmem_get_B(self, tid=0):
+        return self.B.root.checkpoint[tid]
+    
+    def pmem_put_C(self, value, tid=0):
+        self.C.root.checkpoint[tid] = value
+        # self.C.mm.persist(self.C.root.checkpoint[tid])
+         
+    def pmem_get_C(self, tid=0):
+        return self.C.root.checkpoint[tid]

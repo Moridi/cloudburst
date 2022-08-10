@@ -12,6 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from concurrent.futures import thread
 import logging
 import os
 import sys
@@ -94,7 +95,7 @@ def executor(ip, mgmt_ip, schedulers, thread_id):
         client = AnnaIpcClient(thread_id, context)
         local = False
     else:
-        client = AnnaTcpClient('127.0.0.1', '127.0.0.1', local=True, offset=1)
+        client = AnnaTcpClient('127.0.0.1', '127.0.0.1', local=True, offset=thread_id+1)
         local = True
 
     user_library = CloudburstUserLibrary(context, pusher_cache, ip, thread_id,
@@ -499,6 +500,10 @@ if __name__ == '__main__':
 
     conf = sutils.load_conf(conf_file)
     exec_conf = conf['executor']
+    
+    # MULTITHREADED VERSION
+    if len(sys.argv) == 3: 
+        exec_conf['thread_id'] = sys.argv[2]
 
     executor(conf['ip'], conf['mgmt_ip'], exec_conf['scheduler_ips'],
              int(exec_conf['thread_id']))
