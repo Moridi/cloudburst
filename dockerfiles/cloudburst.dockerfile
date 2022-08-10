@@ -21,7 +21,7 @@ ARG source_branch=develop
 ARG build_branch=develop
 
 USER root
-
+# RUN apt-get -y --fix-missing install cmake libtiff5-dev libjpeg8-dev libopenjp2-7-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev python3-tk libharfbuzz-dev libfribidi-dev libxcb1-dev
 # Download latest version of the code from relevant repository & branch -- if
 # none are specified, we use hydro-project/cloudburst by default. Install the KVS
 # client from the Anna project.
@@ -38,6 +38,8 @@ WORKDIR anna
 RUN cd client/python && python3.6 setup.py install
 WORKDIR /
 
+RUN apt-get update
+RUN apt-get -y install libjpeg-dev zlib1g-dev
 # These installations are currently pipeline specific until we figure out a
 # better way to do package management for Python.
 RUN pip3 install tensorflow==1.12.0 tensorboard==1.12.2 scikit-image
